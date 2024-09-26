@@ -1,0 +1,98 @@
+create table customer (
+meter_no varchar(4),
+meter_type varchar(1),
+prev_read int,
+curr_read int,
+cust_type varchar(1),
+last_bill varchar(1));
+
+
+
+create table BILL_COUNT(
+meter_no varchar(4),
+units_used int,
+rate float,
+amt float,
+surcharge float,
+excise float,
+net float);
+
+create table total_bill(
+total_amt float,
+total_surcharge float,
+total_excise float,
+total_net float);
+
+
+delimiter //                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+create procedure calc_bill()
+begin
+declare vunit,vcurr,vprev int;
+declare vrate,vamt,vsur,vexc,vnet float;
+declare vtamt float ;
+declare vtsur,vtexc,vtnet float ;
+declare vmno,vmtype,vctype,lb varchar(4);
+declare vset int default 0;
+declare custcurr cursor for select * from customer;
+declare continue handler for NOT FOUND set vset =1;
+open custcurr;
+label1:loop 
+fetch custcurr into vmno,vmtype,vprev,vcurr,vctype,lb;
+if vset = 1 then
+leave label1;
+end if;
+set vunit = vcurr - vprev;
+if vctype = 'A' then
+set vrate = 1;
+elseif vctype = 'I' then
+set vrate = 1.25;
+elseif vctype = 'C' then
+set vrate = 1.50;
+elseif vctype = 'R' then
+set vrate = 1.30;
+end if;
+set vamt = vrate * vunit;
+if vmtype = 'T' then
+set vsur = 0.10*vamt;
+else 
+set vsur = 0.05*vamt;
+end if;
+set vexc = 0.30 * (vamt + vsur);
+set vnet = vamt+vsur+vexc;
+set vtamt = vtamt + vamt;
+set vtsur = vtsur + vsur;
+set vtexc = vtexc + vexc;
+set vtnet = vtnet + vnet;
+select vmno,vunit,vrate,vamt,vsur,vexc,vnet;
+insert into bill_count values(vmno,vunit,vrate,vamt,vsur,vexc,vnet);
+end loop;
+close custcurr;
+insert into total_bill values(vtamt,vtsur,vtexc,vtnet);
+end//
+delimiter ;  
+
+
+
+delimiter //
+create procedure test()
+begin
+declare a int default 1;
+label1 : loop 
+set a = a+1;
+if a = 5 then
+leave label1;
+end if;
+select a;
+end loop;
+end //
+delimiter ;  
+
+
+
+
+
+
+
+
+
+
